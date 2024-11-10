@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>my cv</title>
+    <!-- Load Doto Font from Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Doto&display=swap" rel="stylesheet">
+    <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: black;
+            overflow: hidden;
+            font-family: 'Doto', monospace;
+            cursor: url('/images/cursor.png'), auto;
+        }
+        #ascii-container, #threejs-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        #threejs-container {
+            /* Allow interaction */
+            pointer-events: auto;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- Containers for Renderers -->
+    <div id="ascii-container"></div>
+    <div id="threejs-container"></div>
+
+    <script type="module">
+        import * as THREE from './build/three.module.js';
+        import { AsciiEffect } from './examples/jsm/effects/AsciiEffect.js';
+
+        /* ===========================
+           Part 1: Dynamic ASCII Waves
+        ============================ */
+
+        let asciiCamera, asciiScene, asciiEffect;
+        let asciiPlane;
+        const waveCenters = [];
+
+        initAscii();
+        animateAscii();
+
+        function initAscii() {
+            const asciiContainer = document.getElementById('ascii-container');
+
+            asciiScene = new THREE.Scene();
+
+            const aspect = window.innerWidth / window.innerHeight;
+            const frustumSize = 50;
+            asciiCamera = new THREE.OrthographicCamera(
+                (frustumSize * aspect) / -2, 
+                (frustumSize * aspect) / 2,
+                frustumSize / 2, 
+                frustumSize / -2,
+                1, 
+                1000
+            );
+            asciiCamera.position.z = 100;
+            asciiCamera.lookAt(asciiScene.position);
+
+            const geometry = new THREE.PlaneGeometry(frustumSize * aspect, frustumSize, 100, 100);
+
+            const colors = [];
+            const vertexCount = geometry.attributes.position.count;
+            for (let i = 0; i < vertexCount; i++) {
+                colors.push(1, 1, 1); // RGB
+            }
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+            const material = new THREE.MeshBasicMaterial({ 
+                vertexColors: true, 
+                side: THREE.DoubleSide 
+            });
+            asciiPlane = new THREE.Mesh(geometry, material);
+            asciiScene.add(asciiPlane);
+
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.domElement.style.display = 'none';
+            asciiScene.add(renderer.domElement);
+
+            asciiEffect = new AsciiEffect(renderer, ".':1!0", { invert: true });
+            asciiEffect.setSize(window.innerWidth, window.innerHeight);
+            asciiEffect.domElement.style.color = 'red';
+            asciiEffect.domElement.style.backgroundColor = 'black';
+            asciiEffect.domElement.style.width = '100%';
+            asciiEffect.domElement.style.height = '100%';
+
+            asciiContainer.appendChild(asciiEffect.domElement);
+
+            const numCenters = Math.floor(Math.random() * 11) + 5;
+            for (let i = 0; i < numCenters; i++) {
+                waveCenters.push({
+                    x: (Math.random() - 0.5) * frustumSize * aspect * 0.8,
+                    y: (Math.random() - 0.5) * frustumSize * 0.8,
+                    speed: Math.random() * 2 + 1, // Wave speed
+                    frequency: Math.random() * 3 + 1, // Wave frequency
+                    phase: Math.random() * Math.PI * 2 // Wave phase
+                });
+            }
+
+            // Handle Window Resize
+            window.addEventListener('resize', onWindowResizeAscii);
+        }
+
+        function onWindowResizeAscii() {
+            const aspect = window.innerWidth / window.innerHeight;
+            const frustumSize = 100;
+
+            asciiCamera.left = (-frustumSize * aspect) / 2;
+            asciiCamera.right = (frustumSize * aspect) / 2;
+            asciiCamera.top = frustumSize / 2;
+            asciiCamera.bottom = -frustumSize / 2;
+            asciiCamera.updateProjectionMatrix();
+
+            asciiPlane.geometry.dispose();
+            asciiPlane.geometry = new THREE.PlaneGeometry(frustumSize * aspect, frustumSize, 200, 200);
+
+            const colors = [];
+            const vertexCount = asciiPlane.geometry.attributes.position.count;
+            for (let i = 0; i < vertexCount; i++) {
+                colors.push(1, 1, 1); // RGB
+            }
+            asciiPlane.geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+            asciiEffect.setSize(window.innerWidth, window.innerHeight);
+
+            waveCenters.length = 0;
+            const numCenters = Math.floor(Math.random() * 11) + 5
+            for (let i = 0; i < numCenters; i++) {
+                waveCenters.push({
+                    x: (Math.random() - 0.5) * frustumSize * aspect * 0.8,
+                    y: (Math.random() - 0.5) * frustumSize * 0.8,
+                    speed: Math.random() * 2 + 1, // Wave speed
+                    frequency: Math.random() * 3 + 1, // Wave frequency
+                    phase: Math.random() * Math.PI * 2 // Wave phase
+                });
+            }
+        }
+
+        function animateAscii() {
+            requestAnimationFrame(animateAscii);
+
+            const time = Date.now() * 0.001;
+
+            const position = asciiPlane.geometry.attributes.position;
+            const vertices = position.array;
+            const colors = asciiPlane.geometry.attributes.color.array;
+
+            for (let i = 0; i < vertices.length; i += 3) {
+                let z = 0;
+                const x = vertices[i];
+                const y = vertices[i + 1];
+
+                for (let j = 0; j < waveCenters.length; j++) {
+                    const center = waveCenters[j];
+                    const dx = x - center.x;
+                    const dy = y - center.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    z += Math.sin(distance / center.frequency - time * center.speed + center.phase) * 2;
+                }
+
+                vertices[i + 2] = z;
+
+                const normalizedZ = THREE.MathUtils.clamp((z + 10) / 20, 0, 1);
+                colors[i] = normalizedZ;     // Red
+                colors[i + 1] = normalizedZ; // Green
+                colors[i + 2] = normalizedZ; // Blue
+            }
+
+            position.needsUpdate = true;
+            asciiPlane.geometry.attributes.color.needsUpdate = true;
+
+            asciiEffect.render(asciiScene, asciiCamera);
+        }
+
+        /* ===========================
+           Part 2: 3D CV Images with Buttons
+        ============================ */
+
+        let cvCamera, cvScene, cvRenderer;
+        let cvPlane, cv2Plane;
+        let downloadRuButton, downloadEnButton;
+        let raycaster = new THREE.Raycaster();
+        let mouse = new THREE.Vector2();
+        let targetRotation = { x: 0, y: 0 };
+
+        // Initialize 3D CV and Buttons
+        initCV();
+        animateCV();
+
+        function initCV() {
+            const threejsContainer = document.getElementById('threejs-container');
+
+            // Create Scene
+            cvScene = new THREE.Scene();
+
+            // Set up Perspective Camera
+            cvCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            cvCamera.position.z = 8; // Increased z position for better view
+
+            // Create Renderer with Transparency
+            cvRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            cvRenderer.setSize(window.innerWidth, window.innerHeight);
+            cvRenderer.setPixelRatio(window.devicePixelRatio);
+            threejsContainer.appendChild(cvRenderer.domElement);
+
+            // Load Textures for CVs
+            const textureLoader = new THREE.TextureLoader();
+            const textureEn = textureLoader.load('cv.png', () => {
+                cvRenderer.render(cvScene, cvCamera);
+            });
+            const textureRu = textureLoader.load('cv2.png', () => {
+                cvRenderer.render(cvScene, cvCamera);
+            });
+
+            // Create 3D Box for English CV (Increased Size)
+            const geometryEn = new THREE.BoxGeometry(6, 8, 0.2); // Width, Height, Depth
+            const materialEn = new THREE.MeshBasicMaterial({ map: textureEn, transparent: true });
+            cvPlane = new THREE.Mesh(geometryEn, materialEn);
+            cvPlane.position.x = 4; // Shift right
+            cvScene.add(cvPlane);
+
+            // Create 3D Box for Russian CV
+            const geometryRu = new THREE.BoxGeometry(6, 8, 0.2); // Width, Height, Depth
+            const materialRu = new THREE.MeshBasicMaterial({ map: textureRu, transparent: true });
+            cv2Plane = new THREE.Mesh(geometryRu, materialRu);
+            cv2Plane.position.x = -4; // Shift left
+            cvScene.add(cv2Plane);
+
+            // Create Download Buttons
+            downloadEnButton = createButton('download');
+            // Position button relative to English CV (as a child)
+            downloadEnButton.position.set(0, -5, 0); // Above the CV
+            downloadEnButton.name = 'downloadEn';
+            cvPlane.add(downloadEnButton); // Attach to English CV
+
+            downloadRuButton = createButton('download');
+            // Position button relative to Russian CV (as a child)
+            downloadRuButton.position.set(0, -5, 0); // Above the CV
+            downloadRuButton.name = 'downloadRu';
+            cv2Plane.add(downloadRuButton); // Attach to Russian CV
+
+            // Add Event Listeners for Mouse Movement and Clicks
+            document.addEventListener('mousemove', onMouseMove, false);
+            document.addEventListener('mousedown', onMouseDown, false);
+
+            // Handle Window Resize
+            window.addEventListener('resize', onWindowResizeCV);
+        }
+
+        /**
+         * Function to Create 3D Buttons
+         * @param {string} text - The text to display on the button
+         * @returns {THREE.Mesh} - The created button mesh
+         */
+        function createButton(text) {
+            // Create Canvas for Button Text
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            const fontSize = 128; // Increased font size for better visibility
+            context.font = `${fontSize}px 'Doto'`;
+            // Measure Text Width
+            const textMetrics = context.measureText(text);
+            canvas.width = textMetrics.width + 40; // Add padding
+            canvas.height = fontSize * 1.5; // Add some height padding
+            // Redraw Text with Padding and Black Background
+            context.font = `${fontSize}px 'Doto'`;
+            context.fillStyle = 'black';
+            context.fillRect(0, 0, canvas.width, canvas.height); // Black background
+            context.fillStyle = 'white';
+            context.fillText(text, 20, fontSize); // Position text with padding
+
+            // Create Texture from Canvas
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.minFilter = THREE.LinearFilter;
+            texture.wrapS = THREE.ClampToEdgeWrapping;
+            texture.wrapT = THREE.ClampToEdgeWrapping;
+
+            // Create Material with Transparency
+            const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
+
+            // Create Box Geometry for Button to add depth
+            const geometry = new THREE.BoxGeometry(6, 1.4, 0.2); // Width, Height, Depth
+            const button = new THREE.Mesh(geometry, material);
+
+            return button;
+        }
+
+        /**
+         * Handle Mouse Movement for Rotation Effect
+         * @param {MouseEvent} event 
+         */
+        function onMouseMove(event) {
+            // Normalize Mouse Coordinates (-1 to +1)
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            // Set Target Rotations Based on Mouse Position
+            targetRotation.y = mouse.x * 0.5; // Rotation intensity
+            targetRotation.x = mouse.y * 0.5;
+        }
+
+        /**
+         * Handle Mouse Clicks for Button Interaction
+         * @param {MouseEvent} event 
+         */
+        function onMouseDown(event) {
+            // Update Mouse Coordinates
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            // Update Raycaster with Current Mouse Position and Camera
+            raycaster.setFromCamera(mouse, cvCamera);
+
+            // Check for Intersections with Scene Objects
+            const intersects = raycaster.intersectObjects(cvScene.children, true);
+
+            if (intersects.length > 0) {
+                const firstIntersect = intersects[0].object;
+                if (firstIntersect.name === 'downloadEn') {
+                    // Download English CV (cv.png)
+                    downloadFile('cv.png');
+                } else if (firstIntersect.name === 'downloadRu') {
+                    // Download Russian CV (cv2.png)
+                    downloadFile('cv2.png');
+                }
+            }
+        }
+
+        /**
+         * Function to Trigger File Download
+         * @param {string} filename - The name of the file to download
+         */
+        function downloadFile(filename) {
+            const link = document.createElement('a');
+            link.href = filename;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        /**
+         * Handle Window Resize for 3D CV Scene
+         */
+        function onWindowResizeCV() {
+            cvCamera.aspect = window.innerWidth / window.innerHeight;
+            cvCamera.updateProjectionMatrix();
+            cvRenderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        /**
+         * Animate 3D CV Scene and Buttons
+         */
+        function animateCV() {
+            requestAnimationFrame(animateCV);
+
+            // Smoothly Rotate CV Planes Towards Target Rotations
+            cvPlane.rotation.y += (targetRotation.y - cvPlane.rotation.y) * 0.05;
+            cvPlane.rotation.x += (targetRotation.x - cvPlane.rotation.x) * 0.05;
+
+            cv2Plane.rotation.y += (targetRotation.y - cv2Plane.rotation.y) * 0.05;
+            cv2Plane.rotation.x += (targetRotation.x - cv2Plane.rotation.x) * 0.05;
+
+            // Render the 3D CV Scene
+            cvRenderer.render(cvScene, cvCamera);
+        }
+
+        /* ===========================
+           End of Script
+        ============================ */
+    </script>
+    <script>
+    if (/Mobi|Android/i.test(navigator.userAgent)) {
+        alert("N07 F0r M08113 D3V1C35, 50rrY");
+    }
+    </script>
+</body>
+</html>

@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>about me</title>
+    <!-- Use Consolas Font from System Fonts -->
+    <style>
+        /* Reset and base styles */
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: black;
+            overflow: hidden;
+            font-family: Consolas, monospace;
+            cursor: url('/images/cursor.png'), auto;
+        }
+        #ascii-container, #threejs-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        #threejs-container {
+            /* Allow interaction */
+            pointer-events: auto;
+        }
+        canvas {
+            display: block;
+        }
+        /* Style for the centered content and icons */
+        #center-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 1); /* Solid black background */
+            padding: 20px 40px;
+            text-align: center;
+            z-index: 10; /* Ensure it is above other elements */
+            border-radius: 10px; /* Optional: Rounded corners */
+        }
+        /* Style for the icons container */
+        #icons-container {
+            margin-bottom: 20px; /* Space between icons and ASCII art */
+        }
+        /* Style for each icon */
+        .icon {
+            width: 32px; /* Size of the icon */
+            height: 32px;
+            margin: 0 10px; /* Spacing between icons */
+            display: inline-block;
+            vertical-align: middle;
+        }
+        /* Style for the ASCII art text */
+        #center-text {
+            color: red; /* Changed text color to red */
+            font-size: 1em;
+            white-space: pre; /* Preserve formatting */
+        }
+        /* Optional: Add hover effect to icons */
+        .icon:hover {
+            transform: scale(1.1);
+            transition: transform 0.2s;
+        }
+    </style>
+</head>
+<body>
+    <!-- Containers for Renderers -->
+    <div id="ascii-container"></div>
+    <div id="threejs-container"></div>
+
+    <!-- Centered content with icons and ASCII art -->
+    <div id="center-content">
+        <!-- Icons Container -->
+        <div id="icons-container">
+            <!-- Telegram Icon -->
+            <a href="https://t.me/upmylink" target="_blank" rel="noopener noreferrer" class="icon" title="Telegram">
+                <img src="telegram.png" alt="Telegram" width="32" height="32">
+            </a>
+            <!-- GitHub Icon -->
+            <a href="https://github.com/kompoln" target="_blank" rel="noopener noreferrer" class="icon" title="GitHub">
+                <img src="github.png" alt="GitHub" width="32" height="32">
+            </a>
+            <!-- Email Icon -->
+            <a href="mailto:root@oracix.ru" target="_blank" rel="noopener noreferrer" class="icon" title="Email">
+                <img src="email.png" alt="@mail" width="32" height="32">
+            </a>
+            <!-- CV Icon -->
+            <a href="https://oracix.ru/cv.html" target="_blank" rel="noopener noreferrer" class="icon" title="CV">
+                <img src="cvico.png" alt="CV" width="32" height="32">
+            </a>
+        </div>
+        <!-- ASCII Art Text -->
+        <div id="center-text">
+<pre>
+                                                                                                                                                                                                                                                                                           
+001           100  01        10        ,11000011,     ,100001,     0001      00  000000000000     ,10      ,11000011,  000000000000  0000000000               ,10    0001      00  0000000011,        0000000011    110000001,  0000000000   00        00  001           100   110000001,  
+0001         1000   10,    ,01        10"'    `"01  ,01"'  `"10,   00001     00          ,01'   ,1000     10"'    `"01         ,01'  00                     ,1000    00001     00  00      `"01       00      "01  10"     "00  00           00        00  0001         1000  10"     "00  
+00`01       10'00    10,  ,01        10'           ,01        10,  00 `01    00         10"   ,10" 00    10'                  10"    00  ____             ,10" 00    00 `01    00  00        `01      00      ,01          101  00  ____     00        00  00`01       10'00          101  
+00 `01     10' 00     "0110"         00            00          00  00  `01   00       ,01'  ,10"   00    00                 ,01'     0010111101,        ,10"   00    00  `01   00  00         00      0011111101'       1110"   0010111101,  00        00  00 `01     10' 00       1110"   
+00  `01   10'  00      `00'          00            00          00  00   `01  00      10"  ,10"     00    00                10"       11"     `01      ,10"     00    00   `01  00  00         00      00""""00'         ""10,   11"     `01  00        00  00  `01   10'  00       ""10,   
+00   `01 10'   00       00           10,           `01        10'  00    `01 00    ,01'   0000000000000  10,             ,01'                 10      0000000000000  00    `01 00  00         01      00    `01            "01           10  00        00  00   `01 10'   00          "01  
+00    `000'    00       00            101.    .101  `011,  ,110'   00     `0000   10"              00     101.    .101  10"          101     101               00    00     `0000  00      .101       00     `01   10,     100  101     101  101.    .101  00    `000'    00  10,     100  
+00     `0'     00       00             `"100001"'     "100001"     00      `000  01'               00      `"100001"'  01'            "1000001"                00    00      `000  000000001"'        00      `01   "10000001'   "1000001"    `"100001"'   00     `0'     00   "10000001'  
+                                                                                                                                                                                                                                                                                            
+</pre>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as THREE from './build/three.module.js';
+        import { AsciiEffect } from './examples/jsm/effects/AsciiEffect.js';
+
+        /* ===========================
+        Part 1: Dynamic ASCII Waves
+        ============================ */
+
+        let asciiCamera, asciiScene, asciiEffect;
+        let asciiPlane;
+        const dynamicWaveCenters = [];
+        const cursorWaveCenters = [];
+        const MAX_CURSOR_WAVES = 30000;
+        const CURSOR_WAVE_DURATION = 1; // seconds
+        const INFLUENCE_RADIUS = 4; // Adjust as needed
+
+        // Initialize ASCII Waves
+        initAscii();
+        animateAscii();
+
+        // Add mousemove event listener to create cursor waves
+        window.addEventListener('mousemove', onMouseMove);
+
+        function onMouseMove(event) {
+            // Calculate mouse position in normalized device coordinates (-1 to +1) for both components
+            const mouseX = event.clientX;
+            const mouseY = event.clientY;
+
+            // Convert screen coordinates to world coordinates
+            const aspect = window.innerWidth / window.innerHeight;
+            const frustumSize = 50;
+            const x = (mouseX / window.innerWidth) * frustumSize * aspect - frustumSize * aspect / 2;
+            const y = (1 - mouseY / window.innerHeight) * frustumSize - frustumSize / 2;
+
+            // Add new cursor wave center with timestamp
+            cursorWaveCenters.push({
+                x: x,
+                y: y,
+                speed: 2, 
+                frequency: 2,
+                phase: Math.random() * Math.PI * 2,
+                timestamp: Date.now() / 1000 
+            });
+
+            // Limit the number of cursor waves
+            if (cursorWaveCenters.length > MAX_CURSOR_WAVES) {
+                cursorWaveCenters.shift(); // Remove the oldest wave
+            }
+        }
+
+        function initAscii() {
+            const asciiContainer = document.getElementById('ascii-container');
+
+            // Create Scene
+            asciiScene = new THREE.Scene();
+
+            // Set up Orthographic Camera for Top-Down Projection
+            const aspect = window.innerWidth / window.innerHeight;
+            const frustumSize = 50;
+            asciiCamera = new THREE.OrthographicCamera(
+                (frustumSize * aspect) / -2,
+                (frustumSize * aspect) / 2,
+                frustumSize / 2,
+                frustumSize / -2,
+                1,
+                1000
+            );
+            asciiCamera.position.z = 100;
+            asciiCamera.lookAt(asciiScene.position);
+
+            // Create Plane for Waves
+            const geometry = new THREE.PlaneGeometry(frustumSize * aspect, frustumSize, 100, 100);
+
+            // Initialize Vertex Colors (White)
+            const colors = [];
+            const vertexCount = geometry.attributes.position.count;
+            for (let i = 0; i < vertexCount; i++) {
+                colors.push(1, 1, 1); // RGB
+            }
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+            // Create Material Using Vertex Colors
+            const material = new THREE.MeshBasicMaterial({
+                vertexColors: true,
+                side: THREE.DoubleSide
+            });
+            asciiPlane = new THREE.Mesh(geometry, material);
+            asciiScene.add(asciiPlane);
+
+            // Create Renderer (Hidden, used by AsciiEffect)
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            // Hide the renderer's canvas as we'll use AsciiEffect's canvas
+            renderer.domElement.style.display = 'none';
+            asciiScene.add(renderer.domElement);
+
+            // Initialize AsciiEffect
+            asciiEffect = new AsciiEffect(renderer, ".':1!0", { invert: true });
+            asciiEffect.setSize(window.innerWidth, window.innerHeight);
+            asciiEffect.domElement.style.color = 'red';
+            asciiEffect.domElement.style.backgroundColor = 'black';
+            asciiEffect.domElement.style.width = '100%';
+            asciiEffect.domElement.style.height = '100%';
+
+            asciiContainer.appendChild(asciiEffect.domElement);
+
+            // Generate Initial Dynamic Wave Centers (10-20)
+            const numCenters = Math.floor(Math.random() * 11) + 10; // 10-20
+            for (let i = 0; i < numCenters; i++) {
+                dynamicWaveCenters.push({
+                    x: (Math.random() - 0.5) * frustumSize * aspect * 0.8,
+                    y: (Math.random() - 0.5) * frustumSize * 0.8,
+                    speed: Math.random() * 2 + 1, // Wave speed
+                    frequency: Math.random() * 3 + 1, // Wave frequency
+                    phase: Math.random() * Math.PI * 2 // Wave phase
+                });
+            }
+
+            // Handle Window Resize
+            window.addEventListener('resize', onWindowResizeAscii);
+        }
+
+        function onWindowResizeAscii() {
+            const aspect = window.innerWidth / window.innerHeight;
+            const frustumSize = 100;
+
+            // Update Orthographic Camera Parameters
+            asciiCamera.left = (-frustumSize * aspect) / 2;
+            asciiCamera.right = (frustumSize * aspect) / 2;
+            asciiCamera.top = frustumSize / 2;
+            asciiCamera.bottom = -frustumSize / 2;
+            asciiCamera.updateProjectionMatrix();
+
+            // Update Plane Geometry
+            asciiPlane.geometry.dispose();
+            asciiPlane.geometry = new THREE.PlaneGeometry(frustumSize * aspect, frustumSize, 200, 200);
+
+            // Reinitialize Vertex Colors (White)
+            const colors = [];
+            const vertexCount = asciiPlane.geometry.attributes.position.count;
+            for (let i = 0; i < vertexCount; i++) {
+                colors.push(1, 1, 1); // RGB
+            }
+            asciiPlane.geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+            // Update AsciiEffect Size
+            asciiEffect.setSize(window.innerWidth, window.innerHeight);
+
+            // Regenerate Dynamic Wave Centers with New Dimensions
+            dynamicWaveCenters.length = 0;
+            const numCenters = Math.floor(Math.random() * 11) + 10; // count Wave Centers
+            for (let i = 0; i < numCenters; i++) {
+                dynamicWaveCenters.push({
+                    x: (Math.random() - 0.5) * frustumSize * aspect * 0.8,
+                    y: (Math.random() - 0.5) * frustumSize * 0.8,
+                    speed: Math.random() * 2 + 1, // Wave speed
+                    frequency: Math.random() * 3 + 1, // Wave frequency
+                    phase: Math.random() * Math.PI * 2 // Wave phase
+                });
+            }
+        }
+
+        function animateAscii() {
+            requestAnimationFrame(animateAscii);
+
+            const currentTime = Date.now() / 1000; // Current time in seconds
+
+            // Remove cursor wave centers older than CURSOR_WAVE_DURATION seconds
+            while (cursorWaveCenters.length > 0 && (currentTime - cursorWaveCenters[0].timestamp) > CURSOR_WAVE_DURATION) {
+                cursorWaveCenters.shift();
+            }
+
+            // Update Plane Vertices to Create Waves
+            const position = asciiPlane.geometry.attributes.position;
+            const vertices = position.array;
+            const colors = asciiPlane.geometry.attributes.color.array;
+
+            const vertexCount = position.count;
+
+            for (let i = 0; i < vertexCount; i++) {
+                const index = i * 3;
+                const x = vertices[index];
+                const y = vertices[index + 1];
+
+                let z_dynamic = 0;
+
+                // Sum contributions from dynamic wave centers
+                dynamicWaveCenters.forEach(center => {
+                    const dx = x - center.x;
+                    const dy = y - center.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    z_dynamic += Math.sin(distance / center.frequency - currentTime * center.speed + center.phase) * 2;
+                });
+
+                let z_cursor = 0;
+                let isCursorInfluence = false;
+
+                // Sum contributions from cursor wave centers if within influence radius
+                cursorWaveCenters.forEach(center => {
+                    const dx = x - center.x;
+                    const dy = y - center.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance < INFLUENCE_RADIUS) {
+                        z_cursor += Math.sin(distance / center.frequency - currentTime * center.speed + center.phase) * 2;
+                        isCursorInfluence = true;
+                    }
+                });
+
+                let finalZ;
+                if (isCursorInfluence) {
+                    finalZ = z_cursor;
+                    const normalizedZ = THREE.MathUtils.clamp((finalZ + 10) / 20, 0, 1);
+                    colors[index] = normalizedZ;     // Red
+                    colors[index + 1] = 0;           // Green
+                    colors[index + 2] = 0;           // Blue
+                } else {
+                    finalZ = z_dynamic;
+                    const normalizedZ = THREE.MathUtils.clamp((finalZ + 10) / 20, 0, 1);
+                    colors[index] = normalizedZ;     // Red
+                    colors[index + 1] = normalizedZ; // Green
+                    colors[index + 2] = normalizedZ; // Blue
+                }
+
+                vertices[index + 2] = finalZ;
+            }
+
+            position.needsUpdate = true;
+            asciiPlane.geometry.attributes.color.needsUpdate = true;
+
+            asciiEffect.render(asciiScene, asciiCamera);
+        }
+    </script>
+    <script>
+    if (/Mobi|Android/i.test(navigator.userAgent)) {
+        alert("N07 F0r M08113 D3V1C35, 50rrY");
+    }
+   </script>
+</body>
+</html>
